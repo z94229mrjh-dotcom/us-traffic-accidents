@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import logging
 import argparse
 import numpy as np
@@ -179,7 +177,6 @@ def convert_types(df: pd.DataFrame) -> pd.DataFrame:
         "End_Lat",
         "End_Lng",
         "Distance(mi)",
-        "Temperature(F)",
         "Wind_Chill(F)",
         "Humidity(%)",
         "Pressure(in)",
@@ -206,6 +203,7 @@ def convert_types(df: pd.DataFrame) -> pd.DataFrame:
         "Civil_Twilight",
         "Nautical_Twilight",
         "Astronomical_Twilight",
+        "Temperature_Range(F)"
     ]
 
     bool_cols = [
@@ -254,6 +252,34 @@ def convert_types(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             logger.info("Casting %s to string", col)
             df[col] = df[col].astype("string")
+
+    return df
+
+
+def split_range_columns(df):
+    """
+    Split columns with range values (e.g., '10-20') into two separate columns.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    df = df.copy()
+    df['min_temperature_f'] = (
+        df['Temperature_Range(F)']
+        .str.split('-').str[0]
+        .astype(float, errors='ignore')
+    )
+    df['max_temperature_f'] = (
+        df['Temperature_Range(F)']
+        .str.split('-').str[1]
+        .astype(float, errors='ignore')
+    )
+    df = df.drop('Temperature_Range(F)', axis=1)
 
     return df
 
@@ -367,6 +393,7 @@ def main() -> None:
     logger.info("After fixing shifted County records: %s", df.shape)
 
     df = convert_types(df)
+    df = split_range_columns(df)
     df = unify_column_names(df)
     df = unify_categorical_variables(df)
 
